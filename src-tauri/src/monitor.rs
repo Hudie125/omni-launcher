@@ -35,16 +35,13 @@ impl ResourceMonitor {
     pub fn spawn_worker(&self, app: AppHandle) {
         let is_active = self.is_active.clone();
 
-        tokio::spawn(async move {
+        std::thread::spawn(move || {
             let mut sys = System::new_all();
-            let mut interval = tokio::time::interval(Duration::from_millis(1000));
 
             loop {
-                interval.tick().await;
-
                 // Zero-cost sleep when window is hidden
                 if !is_active.load(Ordering::Relaxed) {
-                    tokio::time::sleep(Duration::from_millis(400)).await;
+                    std::thread::sleep(Duration::from_millis(400));
                     continue;
                 }
 
@@ -83,6 +80,7 @@ impl ResourceMonitor {
                 };
 
                 let _ = app.emit("resource-update", &metrics);
+                std::thread::sleep(Duration::from_millis(1000));
             }
         });
     }

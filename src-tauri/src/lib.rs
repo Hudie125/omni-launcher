@@ -9,7 +9,7 @@ use config::AppConfig;
 use monitor::ResourceMonitor;
 use search::{SearchCoordinator, SearchResultItem};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use tokio::sync::RwLock;
 
 pub struct AppState {
@@ -121,9 +121,15 @@ pub fn run() {
                 window::setup_window_effects(&window);
                 // Position centered at bottom of screen
                 let _ = window::reposition_bottom_center(&window, app_config.bottom_offset);
+                // Reveal launcher on initial startup so user immediately sees HUD
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+                let _ = window.emit("launcher-shown", ());
             }
 
             // Start resource monitor background worker
+            monitor.set_active(true);
             monitor.spawn_worker(handle.clone());
 
             // Start Hotkey listener
