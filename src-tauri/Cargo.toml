@@ -1,0 +1,53 @@
+[package]
+name = "omni-launcher"
+version = "0.1.0"
+description = "Ultra-fast, modular, lightweight cross-platform system search launcher in Rust"
+authors = ["Hudie125 <kronyxxbezdar@gmail.com>"]
+edition = "2021"
+
+[lib]
+name = "omni_launcher_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = ["tray-icon"] }
+tauri-plugin-global-shortcut = "2.4"
+tauri-plugin-opener = "2.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+sysinfo = "0.33"
+evalexpr = "13.1"
+ignore = "0.4"
+walkdir = "2.5"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+dirs = "6.0"
+toml = "0.8"
+fuzzy-matcher = "0.3.7"
+window-vibrancy = "0.8"
+open = "5.3"
+chrono = { version = "0.4", features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dwm",
+    "Win32_Foundation",
+    "Win32_System_Power",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell"
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

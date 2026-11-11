@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omni Launcher</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-oled">
+  <div id="launcher-container" class="launcher-card" data-tauri-drag-region>
+    <!-- Search Bar -->
+    <header class="search-header" data-tauri-drag-region>
+      <div class="search-icon-wrapper" data-tauri-drag-region>
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <input 
+        id="search-input" 
+        type="text" 
+        placeholder="Type to search apps, files, math, /ai or commands..." 
+        autocomplete="off" 
+        spellcheck="false"
+        autofocus 
+      />
+      <div class="header-actions">
+        <span id="badge-mode" class="badge">Universal</span>
+        <button id="btn-settings" class="icon-btn" title="Settings (Ctrl+,)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Results Area -->
+    <main id="results-container" class="results-container">
+      <div id="results-list" class="results-list">
+        <!-- Rendered items go here -->
+      </div>
+      <div id="empty-state" class="empty-state hidden">
+        <p>No results found</p>
+        <span>Press <kbd>Enter</kbd> to search the web</span>
+      </div>
+    </main>
+
+    <!-- Settings Overlay Modal -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Omni Launcher Preferences</h2>
+          <button id="btn-close-settings" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-row">
+            <label for="setting-hotkey">Global Activation Hotkey:</label>
+            <input type="text" id="setting-hotkey" value="RightAlt" placeholder="e.g. RightAlt, Alt+Space" />
+          </div>
+          <div class="setting-row">
+            <label for="setting-bottom-offset">Bottom Screen Offset (px):</label>
+            <input type="number" id="setting-bottom-offset" value="80" min="20" max="400" />
+          </div>
+          <div class="setting-row">
+            <label for="setting-theme">Visual Theme:</label>
+            <select id="setting-theme">
+              <option value="oled">Pitch Black (OLED #000000)</option>
+              <option value="glass">Glassmorphism Blur</option>
+              <option value="dark">Dark Slate</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="setting-hide-blur">Hide on focus lost (blur):</label>
+            <input type="checkbox" id="setting-hide-blur" checked />
+          </div>
+          <div class="setting-row">
+            <label for="setting-ollama-model">Ollama Local LLM Model:</label>
+            <input type="text" id="setting-ollama-model" value="auto" placeholder="auto, llama3, mistral, etc." />
+          </div>
+          <div class="setting-actions">
+            <button id="btn-save-settings" class="primary-btn">Save Configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar & Resource Monitor -->
+    <footer class="status-bar" data-tauri-drag-region>
+      <div class="monitor-metrics">
+        <div class="metric cpu" title="CPU Usage and Clock Frequency">
+          <span class="dot"></span>
+          <span class="label">CPU</span>
+          <span id="metric-cpu-val" class="value">0%</span>
+        </div>
+        <div class="metric ram" title="RAM Usage">
+          <span class="dot"></span>
+          <span class="label">RAM</span>
+          <span id="metric-ram-val" class="value">0/0 GB</span>
+        </div>
+        <div class="metric gpu" title="GPU Usage">
+          <span class="dot"></span>
+          <span class="label">GPU</span>
+          <span id="metric-gpu-val" class="value">--</span>
+        </div>
+      </div>
+      <div class="footer-shortcuts">
+        <span class="shortcut-tip"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span class="shortcut-tip"><kbd>↵</kbd> Execute</span>
+        <span class="shortcut-tip"><kbd>Tab</kbd> Action</span>
+        <span class="shortcut-tip"><kbd>Esc</kbd> Hide</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

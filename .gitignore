@@ -1,0 +1,13 @@
+/target
+/src-tauri/target
+/node_modules
+/.idea
+/.vscode
+*.exe
+*.msi
+*.deb
+*.AppImage
+*.log
+Thumbs.db
+Desktop.ini
+.DS_Store
