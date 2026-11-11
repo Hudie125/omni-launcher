@@ -29,7 +29,7 @@ impl Default for AppConfig {
             hotkey: "RightAlt".to_string(),
             bottom_offset: 80,
             theme: "oled".to_string(),
-            hide_on_blur: true,
+            hide_on_blur: false,
             ollama_model: "auto".to_string(),
             file_search_dirs: default_dirs,
             file_exclude_patterns: vec![
