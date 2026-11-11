@@ -154,5 +154,5 @@ pub fn run() {
             save_config
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Omni Launcher application");
+        .expect("error while running Finder application");
 }
