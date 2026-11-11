@@ -56,7 +56,7 @@ fn register_standard_hotkey(app: AppHandle, hotkey_str: &str, bottom_offset: i32
 
 #[cfg(target_os = "windows")]
 fn start_windows_right_alt_hook(app: AppHandle, bottom_offset: i32, is_running: Arc<AtomicBool>) {
-    use std::sync::atomic::AtomicU64;
+    use std::sync::OnceLock;
     use windows_sys::Win32::Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW,
@@ -64,19 +64,13 @@ fn start_windows_right_alt_hook(app: AppHandle, bottom_offset: i32, is_running: 
         WH_KEYBOARD_LL, WM_KEYUP, WM_SYSKEYUP,
     };
 
-    static mut HOOK: HHOOK = std::ptr::null_mut();
-    static LAST_PRESS: AtomicU64 = AtomicU64::new(0);
-
-    // Context passed across static hook
     struct HookContext {
         app: AppHandle,
         bottom_offset: i32,
     }
 
-    static mut CTX: Option<HookContext> = None;
-    unsafe {
-        CTX = Some(HookContext { app, bottom_offset });
-    }
+    static CTX: OnceLock<HookContext> = OnceLock::new();
+    let _ = CTX.set(HookContext { app, bottom_offset });
 
     unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         if code >= 0 {
@@ -85,23 +79,22 @@ fn start_windows_right_alt_hook(app: AppHandle, bottom_offset: i32, is_running: 
                 let kbd = *(lparam as *const KBDLLHOOKSTRUCT);
                 // VK_RMENU is 0xA5 (Right Alt / AltGr)
                 if kbd.vkCode == 0xA5 {
-                    if let Some(ctx) = &CTX {
+                    if let Some(ctx) = CTX.get() {
                         let _ = crate::window::toggle_launcher(&ctx.app, ctx.bottom_offset);
                     }
                 }
             }
         }
-        CallNextHookEx(HOOK, code, wparam, lparam)
+        CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)
     }
 
     unsafe {
-        let hook = SetWindowsHookExW(
+        let hook: HHOOK = SetWindowsHookExW(
             WH_KEYBOARD_LL,
             Some(hook_proc),
             std::ptr::null_mut() as HINSTANCE,
             0,
         );
-        HOOK = hook;
 
         let mut msg: MSG = std::mem::zeroed();
         while is_running.load(Ordering::Relaxed) && GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
@@ -109,9 +102,8 @@ fn start_windows_right_alt_hook(app: AppHandle, bottom_offset: i32, is_running: 
             DispatchMessageW(&msg);
         }
 
-        if !HOOK.is_null() {
-            UnhookWindowsHookEx(HOOK);
-            HOOK = std::ptr::null_mut();
+        if !hook.is_null() {
+            UnhookWindowsHookEx(hook);
         }
     }
 }

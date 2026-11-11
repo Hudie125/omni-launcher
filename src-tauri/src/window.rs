@@ -18,8 +18,8 @@ pub fn setup_window_effects(window: &WebviewWindow) {
             if let Ok(hwnd) = window.hwnd() {
                 let preference = DWMWCP_ROUND;
                 let _ = DwmSetWindowAttribute(
-                    hwnd.0 as isize,
-                    DWMWA_WINDOW_CORNER_PREFERENCE,
+                    hwnd.0 as _,
+                    DWMWA_WINDOW_CORNER_PREFERENCE as u32,
                     &preference as *const _ as *const _,
                     std::mem::size_of::<u32>() as u32,
                 );

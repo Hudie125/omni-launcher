@@ -1,6 +1,7 @@
 use super::SearchResultItem;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
