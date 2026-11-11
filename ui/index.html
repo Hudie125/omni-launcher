@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Omni Launcher</title>
+  <title>Finder</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-oled">
@@ -19,7 +19,7 @@
       <input 
         id="search-input" 
         type="text" 
-        placeholder="Type to search apps, files, math, /ai or commands..." 
+        placeholder="Finder • Search apps, files, math, /ai or commands..." 
         autocomplete="off" 
         spellcheck="false"
         autofocus 
@@ -50,7 +50,7 @@
     <div id="settings-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Omni Launcher Preferences</h2>
+          <h2>Finder Preferences</h2>
           <button id="btn-close-settings" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
@@ -66,13 +66,14 @@
             <label for="setting-theme">Visual Theme:</label>
             <select id="setting-theme">
               <option value="oled">Pitch Black (OLED #000000)</option>
-              <option value="glass">Glassmorphism Blur</option>
-              <option value="dark">Dark Slate</option>
+              <option value="glass">Frosted Glassmorphism</option>
+              <option value="dark">Dark Slate Graphite</option>
+              <option value="light">Light Platinum</option>
             </select>
           </div>
           <div class="setting-row">
             <label for="setting-hide-blur">Hide on focus lost (blur):</label>
-            <input type="checkbox" id="setting-hide-blur" checked />
+            <input type="checkbox" id="setting-hide-blur" />
           </div>
           <div class="setting-row">
             <label for="setting-ollama-model">Ollama Local LLM Model:</label>

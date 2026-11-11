@@ -82,20 +82,20 @@ async fn save_config(
     new_config: AppConfig,
     state: State<'_, AppState>,
     app: AppHandle,
-) -> Result<(), String> {
-    new_config.save().map_err(|e| e.to_string())?;
-
+) -> Result<AppConfig, String> {
     {
         let mut cfg = state.config.write().await;
         *cfg = new_config.clone();
     }
+
+    new_config.save().map_err(|e| e.to_string())?;
 
     // Reposition window with new bottom offset
     if let Some(win) = app.get_webview_window("main") {
         let _ = window::reposition_bottom_center(&win, new_config.bottom_offset);
     }
 
-    Ok(())
+    Ok(new_config)
 }
 
 pub fn run() {

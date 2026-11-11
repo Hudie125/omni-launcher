@@ -245,19 +245,38 @@
     }, delay);
   });
 
-  // Settings Modal events
+  // Settings Modal elements & events
+  const settingTheme = document.getElementById('setting-theme');
+  if (settingTheme) {
+    settingTheme.addEventListener('change', (e) => {
+      applyTheme(e.target.value);
+    });
+  }
+
   btnSettings.addEventListener('click', openSettings);
   btnCloseSettings.addEventListener('click', closeSettings);
   btnSaveSettings.addEventListener('click', saveSettings);
+
+  // Shortcut for settings (Ctrl+,)
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+      e.preventDefault();
+      if (settingsModal.classList.contains('hidden')) {
+        openSettings();
+      } else {
+        closeSettings();
+      }
+    }
+  });
 
   async function openSettings() {
     try {
       const cfg = await invoke('get_config');
       if (cfg) {
         document.getElementById('setting-hotkey').value = cfg.hotkey || 'RightAlt';
-        document.getElementById('setting-bottom-offset').value = cfg.bottom_offset || 80;
+        document.getElementById('setting-bottom-offset').value = cfg.bottom_offset ?? 80;
         document.getElementById('setting-theme').value = cfg.theme || 'oled';
-        document.getElementById('setting-hide-blur').checked = cfg.hide_on_blur !== false;
+        document.getElementById('setting-hide-blur').checked = cfg.hide_on_blur === true;
         document.getElementById('setting-ollama-model').value = cfg.ollama_model || 'auto';
       }
     } catch (err) {
@@ -272,25 +291,53 @@
   }
 
   async function saveSettings() {
-    const newConfig = {
-      hotkey: document.getElementById('setting-hotkey').value,
-      bottom_offset: parseInt(document.getElementById('setting-bottom-offset').value, 10) || 80,
-      theme: document.getElementById('setting-theme').value,
-      hide_on_blur: document.getElementById('setting-hide-blur').checked,
-      ollama_model: document.getElementById('setting-ollama-model').value,
-    };
+    btnSaveSettings.textContent = 'Saving...';
+    btnSaveSettings.disabled = true;
 
     try {
-      await invoke('save_config', { newConfig });
-      applyTheme(newConfig.theme);
-      closeSettings();
+      const cur = await invoke('get_config').catch(() => ({}));
+      const themeVal = document.getElementById('setting-theme').value || 'oled';
+      const hotkeyVal = document.getElementById('setting-hotkey').value.trim() || 'RightAlt';
+      const offsetVal = parseInt(document.getElementById('setting-bottom-offset').value, 10) || 80;
+      const hideBlurVal = document.getElementById('setting-hide-blur').checked;
+      const ollamaVal = document.getElementById('setting-ollama-model').value.trim() || 'auto';
+
+      const newConfig = {
+        ...cur,
+        hotkey: hotkeyVal,
+        bottom_offset: offsetVal,
+        bottomOffset: offsetVal,
+        theme: themeVal,
+        hide_on_blur: hideBlurVal,
+        hideOnBlur: hideBlurVal,
+        ollama_model: ollamaVal,
+        ollamaModel: ollamaVal,
+      };
+
+      await invoke('save_config', { newConfig, new_config: newConfig });
+      applyTheme(themeVal);
+      btnSaveSettings.textContent = 'Saved!';
+      setTimeout(() => {
+        btnSaveSettings.textContent = 'Save Configuration';
+        btnSaveSettings.disabled = false;
+        closeSettings();
+      }, 400);
     } catch (err) {
       console.error('Failed to save settings:', err);
+      btnSaveSettings.textContent = 'Error!';
+      setTimeout(() => {
+        btnSaveSettings.textContent = 'Save Configuration';
+        btnSaveSettings.disabled = false;
+      }, 1500);
     }
   }
 
   function applyTheme(theme) {
-    document.body.className = `theme-${theme || 'oled'}`;
+    const t = theme || 'oled';
+    document.body.className = `theme-${t}`;
+    try {
+      localStorage.setItem('finder_theme', t);
+    } catch (_) {}
   }
 
   function escapeHtml(str) {
@@ -329,6 +376,24 @@
     }
   });
 
+  // Load cached theme immediately
+  try {
+    const cachedTheme = localStorage.getItem('finder_theme');
+    if (cachedTheme) {
+      applyTheme(cachedTheme);
+    }
+  } catch (_) {}
+
   // Initial load
-  performSearch('');
+  (async function init() {
+    try {
+      const cfg = await invoke('get_config');
+      if (cfg && cfg.theme) {
+        applyTheme(cfg.theme);
+      }
+    } catch (err) {
+      console.warn('Initial config load:', err);
+    }
+    performSearch('');
+  })();
 })();

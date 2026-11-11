@@ -1,4 +1,4 @@
-# ⚡ Omni Launcher
+# ⚡ Finder
 
 > **Next-generation, ultra-fast, modular system search launcher written in Rust.**  
 > Inspired by Raycast, macOS Spotlight, and Rofi. Designed for Windows 10/11 and Arch Linux (Wayland & X11) with minimal memory footprint and zero CPU overhead when idle.

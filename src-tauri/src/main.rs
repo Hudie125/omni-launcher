@@ -7,7 +7,7 @@ fn is_another_instance_running() -> bool {
     for (pid, process) in sys.processes() {
         if *pid != current_pid {
             let name = process.name().to_string_lossy().to_lowercase();
-            if name.starts_with("omni-launcher") {
+            if name == "finder.exe" || name == "finder" || name == "omni-launcher.exe" || name == "omni-launcher" {
                 return true;
             }
         }
@@ -20,5 +20,5 @@ fn main() {
         return; // Another instance is already running
     }
 
-    omni_launcher_lib::run();
+    finder_lib::run();
 }

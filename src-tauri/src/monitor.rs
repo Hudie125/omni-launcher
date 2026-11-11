@@ -97,8 +97,15 @@ fn query_gpu_status() -> (Option<f32>, Option<String>) {
         }
     }
 
-    // Fallback: fast probe via nvidia-smi with 100ms timeout
-    if let Ok(output) = std::process::Command::new("nvidia-smi")
+    // Fallback: probe via nvidia-smi with CREATE_NO_WINDOW
+    let mut cmd = std::process::Command::new("nvidia-smi");
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW completely stops console flashing
+    }
+
+    if let Ok(output) = cmd
         .args(["--query-gpu=utilization.gpu,name", "--format=csv,noheader,nounits"])
         .output()
     {

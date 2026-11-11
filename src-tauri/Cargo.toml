@@ -1,13 +1,17 @@
 [package]
-name = "omni-launcher"
+name = "finder"
 version = "0.1.0"
 description = "Ultra-fast, modular, lightweight cross-platform system search launcher in Rust"
 authors = ["Hudie125 <kronyxxbezdar@gmail.com>"]
 edition = "2021"
 
 [lib]
-name = "omni_launcher_lib"
+name = "finder_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "finder"
+path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }

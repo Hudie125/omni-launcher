@@ -2,13 +2,19 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
     pub hotkey: String,
+    #[serde(alias = "bottomOffset")]
     pub bottom_offset: i32,
     pub theme: String,
+    #[serde(alias = "hideOnBlur")]
     pub hide_on_blur: bool,
+    #[serde(alias = "ollamaModel")]
     pub ollama_model: String,
+    #[serde(alias = "fileSearchDirs")]
     pub file_search_dirs: Vec<String>,
+    #[serde(alias = "fileExcludePatterns")]
     pub file_exclude_patterns: Vec<String>,
 }
 
@@ -50,7 +56,15 @@ impl Default for AppConfig {
 impl AppConfig {
     pub fn config_path() -> PathBuf {
         let base_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        base_dir.join("omni-launcher").join("config.toml")
+        let finder_path = base_dir.join("Finder").join("config.toml");
+        if finder_path.exists() {
+            return finder_path;
+        }
+        let legacy_path = base_dir.join("omni-launcher").join("config.toml");
+        if legacy_path.exists() {
+            return legacy_path;
+        }
+        finder_path
     }
 
     pub fn load() -> Self {

@@ -1,5 +1,14 @@
 use sysinfo::System;
 
+#[cfg(target_os = "windows")]
+fn spawn_silent(program: &str, args: &[&str]) {
+    use std::os::windows::process::CommandExt;
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(args);
+    cmd.creation_flags(0x08000000);
+    let _ = cmd.spawn();
+}
+
 pub fn execute_system_command(cmd: &str) -> Result<String, String> {
     let parts: Vec<&str> = cmd.trim().split_whitespace().collect();
     if parts.is_empty() {
@@ -9,62 +18,30 @@ pub fn execute_system_command(cmd: &str) -> Result<String, String> {
     match parts[0].to_lowercase().as_str() {
         "lock" => {
             #[cfg(target_os = "windows")]
-            {
-                let _ = std::process::Command::new("rundll32.exe")
-                    .args(["user32.dll,LockWorkStation"])
-                    .spawn();
-            }
+            spawn_silent("rundll32.exe", &["user32.dll,LockWorkStation"]);
             #[cfg(target_os = "linux")]
-            {
-                let _ = std::process::Command::new("loginctl")
-                    .arg("lock-session")
-                    .spawn();
-            }
+            let _ = std::process::Command::new("loginctl").arg("lock-session").spawn();
             Ok("Screen locked".into())
         }
         "sleep" | "suspend" => {
             #[cfg(target_os = "windows")]
-            {
-                let _ = std::process::Command::new("rundll32.exe")
-                    .args(["powrprof.dll,SetSuspendState", "0,1,0"])
-                    .spawn();
-            }
+            spawn_silent("rundll32.exe", &["powrprof.dll,SetSuspendState", "0,1,0"]);
             #[cfg(target_os = "linux")]
-            {
-                let _ = std::process::Command::new("systemctl")
-                    .arg("suspend")
-                    .spawn();
-            }
+            let _ = std::process::Command::new("systemctl").arg("suspend").spawn();
             Ok("Entering sleep mode".into())
         }
         "restart" | "reboot" => {
             #[cfg(target_os = "windows")]
-            {
-                let _ = std::process::Command::new("shutdown.exe")
-                    .args(["/r", "/t", "0"])
-                    .spawn();
-            }
+            spawn_silent("shutdown.exe", &["/r", "/t", "0"]);
             #[cfg(target_os = "linux")]
-            {
-                let _ = std::process::Command::new("systemctl")
-                    .arg("reboot")
-                    .spawn();
-            }
+            let _ = std::process::Command::new("systemctl").arg("reboot").spawn();
             Ok("System restarting".into())
         }
         "shutdown" | "poweroff" => {
             #[cfg(target_os = "windows")]
-            {
-                let _ = std::process::Command::new("shutdown.exe")
-                    .args(["/s", "/t", "0"])
-                    .spawn();
-            }
+            spawn_silent("shutdown.exe", &["/s", "/t", "0"]);
             #[cfg(target_os = "linux")]
-            {
-                let _ = std::process::Command::new("systemctl")
-                    .arg("poweroff")
-                    .spawn();
-            }
+            let _ = std::process::Command::new("systemctl").arg("poweroff").spawn();
             Ok("System shutting down".into())
         }
         "empty" => {
@@ -72,11 +49,7 @@ pub fn execute_system_command(cmd: &str) -> Result<String, String> {
                 || parts.get(1).map(|s| s.to_lowercase()) == Some("bin".into())
             {
                 #[cfg(target_os = "windows")]
-                {
-                    let _ = std::process::Command::new("powershell")
-                        .args(["-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"])
-                        .spawn();
-                }
+                spawn_silent("powershell", &["-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"]);
                 #[cfg(target_os = "linux")]
                 {
                     if let Some(home) = dirs::home_dir() {
