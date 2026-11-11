@@ -144,7 +144,12 @@ pub fn run() {
                     state.monitor.set_active(*focused);
                 }
                 if !focused {
-                    let _ = window.hide();
+                    let now = window::now_millis();
+                    let shown = window::LAST_SHOWN_MS.load(std::sync::atomic::Ordering::Relaxed);
+                    // 400ms grace period to let focus settle on opening without accidental dismissal
+                    if now.saturating_sub(shown) > 400 {
+                        let _ = window.hide();
+                    }
                 }
             }
         })

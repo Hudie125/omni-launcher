@@ -1,4 +1,15 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow};
+
+pub static LAST_SHOWN_MS: AtomicU64 = AtomicU64::new(0);
+static LAST_TOGGLE_MS: AtomicU64 = AtomicU64::new(0);
+
+pub fn now_millis() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
 
 pub fn setup_window_effects(window: &WebviewWindow) {
     #[cfg(target_os = "windows")]
@@ -56,11 +67,19 @@ pub fn reposition_bottom_center(window: &WebviewWindow, bottom_offset: i32) -> R
 }
 
 pub fn toggle_launcher(app: &AppHandle, bottom_offset: i32) -> Result<(), String> {
+    let now = now_millis();
+    let last = LAST_TOGGLE_MS.load(Ordering::Relaxed);
+    if now.saturating_sub(last) < 280 {
+        return Ok(()); // Debounce rapid repeated triggers
+    }
+    LAST_TOGGLE_MS.store(now, Ordering::Relaxed);
+
     if let Some(window) = app.get_webview_window("main") {
         let is_visible = window.is_visible().unwrap_or(false);
         if is_visible {
             window.hide().map_err(|e| e.to_string())?;
         } else {
+            LAST_SHOWN_MS.store(now, Ordering::Relaxed);
             reposition_bottom_center(&window, bottom_offset)?;
             window.show().map_err(|e| e.to_string())?;
             window.unminimize().map_err(|e| e.to_string())?;
