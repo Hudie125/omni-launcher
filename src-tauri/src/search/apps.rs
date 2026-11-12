@@ -1,8 +1,7 @@
 use super::SearchResultItem;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
-#[allow(unused_imports)]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::RwLock;
 
 #[derive(Debug, Clone)]
@@ -54,23 +53,50 @@ impl AppIndex {
             Err(_) => return Vec::new(),
         };
 
+        let mut results = Vec::new();
+
+        // 1. Search Active Windows (WinAPI EnumWindows)
+        let active_windows = crate::system::windows::get_running_windows(&q);
+        for win in active_windows {
+            results.push(SearchResultItem {
+                id: format!("win_{}", win.hwnd),
+                title: format!("[Window] {}", win.title),
+                subtitle: Some("Active running application window".into()),
+                category: "Programs".into(),
+                item_type: "window".into(),
+                card_type: None,
+                path: Some(format!("window://{}", win.hwnd)),
+                action_hint: Some("↵ Switch Window".into()),
+                score: 150,
+                snippet: None,
+                admin_path: None,
+            });
+        }
+
         if q.is_empty() {
-            // Return top 8 frequent/default apps when query is empty
-            return apps
+            // Return top frequent/default apps
+            let defaults: Vec<SearchResultItem> = apps
                 .iter()
                 .take(8)
-                .map(|app| SearchResultItem {
-                    id: format!("app_{}", app.name),
-                    title: app.name.clone(),
-                    subtitle: app.comment.clone().or_else(|| Some(app.exec.clone())),
-                    category: "Applications".into(),
-                    item_type: "app".into(),
-                    card_type: None,
-                    path: Some(app.path.to_string_lossy().to_string()),
-                    action_hint: Some("↵ Launch".into()),
-                    score: 100,
+                .map(|app| {
+                    let path_str = app.path.to_string_lossy().to_string();
+                    SearchResultItem {
+                        id: format!("app_{}", app.name),
+                        title: app.name.clone(),
+                        subtitle: app.comment.clone().or_else(|| Some(app.exec.clone())),
+                        category: "Programs".into(),
+                        item_type: "app".into(),
+                        card_type: None,
+                        path: Some(path_str.clone()),
+                        action_hint: Some("↵ Launch • Shift+↵ Admin".into()),
+                        score: 100,
+                        snippet: None,
+                        admin_path: Some(path_str),
+                    }
                 })
                 .collect();
+            results.extend(defaults);
+            return results;
         }
 
         let mut scored: Vec<(i64, &AppEntry)> = Vec::new();
@@ -90,21 +116,25 @@ impl AppIndex {
 
         scored.sort_by(|a, b| b.0.cmp(&a.0));
 
-        scored
-            .into_iter()
-            .take(15)
-            .map(|(score, app)| SearchResultItem {
+        let matched_apps = scored.into_iter().take(12).map(|(score, app)| {
+            let path_str = app.path.to_string_lossy().to_string();
+            SearchResultItem {
                 id: format!("app_{}", app.name),
                 title: app.name.clone(),
                 subtitle: app.comment.clone().or_else(|| Some(app.exec.clone())),
-                category: "Applications".into(),
+                category: "Programs".into(),
                 item_type: "app".into(),
                 card_type: None,
-                path: Some(app.path.to_string_lossy().to_string()),
-                action_hint: Some("↵ Launch".into()),
+                path: Some(path_str.clone()),
+                action_hint: Some("↵ Launch • Shift+↵ Admin".into()),
                 score: score as i32,
-            })
-            .collect()
+                snippet: None,
+                admin_path: Some(path_str),
+            }
+        });
+
+        results.extend(matched_apps);
+        results
     }
 
     #[cfg(target_os = "windows")]
@@ -114,7 +144,8 @@ impl AppIndex {
             search_dirs.push(PathBuf::from(app_data).join(r"Microsoft\Windows\Start Menu\Programs"));
         }
         if let Ok(program_data) = std::env::var("ProgramData") {
-            search_dirs.push(PathBuf::from(program_data).join(r"Microsoft\Windows\Start Menu\Programs"));
+            search_dirs
+                .push(PathBuf::from(program_data).join(r"Microsoft\Windows\Start Menu\Programs"));
         }
 
         for dir in search_dirs {
@@ -147,17 +178,26 @@ impl AppIndex {
     #[cfg(target_os = "windows")]
     fn add_windows_system_tools(out: &mut Vec<AppEntry>) {
         let tools = [
-            ("Task Manager", "taskmgr.exe", "View running processes and performance"),
             ("Command Prompt", "cmd.exe", "Windows command interpreter"),
-            ("PowerShell", "powershell.exe", "Windows PowerShell terminal"),
-            ("Windows Terminal", "wt.exe", "Modern terminal console"),
-            ("Calculator", "calc.exe", "System calculator"),
-            ("Control Panel", "control.exe", "System settings and configuration"),
-            ("Registry Editor", "regedit.exe", "Windows registry management"),
-            ("Device Manager", "devmgmt.msc", "Hardware device settings"),
-            ("Disk Management", "diskmgmt.msc", "Partition and disk tool"),
-            ("Notepad", "notepad.exe", "Simple text editor"),
+            ("Task Manager", "taskmgr.exe", "View running processes and performance"),
+            ("Calculator", "calc.exe", "System arithmetic calculator"),
+            ("Notepad", "notepad.exe", "Simple plain text editor"),
+            ("Settings", "ms-settings:", "System settings and preferences"),
+            ("Explorer", "explorer.exe", "File management and disk navigator"),
             ("Snipping Tool", "snippingtool.exe", "Screen capture utility"),
+            ("Recycle Bin", "shell:RecycleBinFolder", "Deleted files and restore bin"),
+            ("PowerShell", "powershell.exe", "Windows PowerShell automation console"),
+            ("Windows Terminal", "wt.exe", "Modern multi-tab terminal console"),
+            ("Registry Editor", "regedit.exe", "Windows registry management"),
+            ("Services", "services.msc", "Windows background services manager"),
+            ("Disk Management", "diskmgmt.msc", "Partition and disk drive tool"),
+            ("Device Manager", "devmgmt.msc", "Hardware drivers and peripherals"),
+            ("Event Viewer", "eventvwr.msc", "System diagnostics and event logs"),
+            ("System Info", "msinfo32.exe", "Hardware specifications and OS info"),
+            ("Paint", "mspaint.exe", "Raster graphics editor"),
+            ("WordPad", "wordpad.exe", "Rich text document editor"),
+            ("Character Map", "charmap.exe", "Unicode symbols and glyphs"),
+            ("On-Screen Keyboard", "osk.exe", "Virtual accessibility keyboard"),
         ];
 
         for (name, exec, comment) in tools {
@@ -201,37 +241,38 @@ impl AppIndex {
 }
 
 #[cfg(target_os = "linux")]
-fn parse_desktop_entry(path: &Path, content: &str) -> Option<AppEntry> {
+fn parse_desktop_entry(path: &std::path::Path, content: &str) -> Option<AppEntry> {
     let mut name = None;
     let mut exec = None;
     let mut comment = None;
-    let mut nodisplay = false;
+    let mut no_display = false;
 
     for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("Name=") && name.is_none() {
-            name = Some(trimmed[5..].to_string());
-        } else if trimmed.starts_with("Exec=") && exec.is_none() {
-            let cmd = trimmed[5..].split_whitespace().next().unwrap_or("");
-            exec = Some(cmd.to_string());
-        } else if trimmed.starts_with("Comment=") && comment.is_none() {
-            comment = Some(trimmed[8..].to_string());
-        } else if trimmed == "NoDisplay=true" {
-            nodisplay = true;
+        let line = line.trim();
+        if line.starts_with("Name=") && name.is_none() {
+            name = Some(line["Name=".len()..].to_string());
+        } else if line.starts_with("Exec=") && exec.is_none() {
+            exec = Some(line["Exec=".len()..].to_string());
+        } else if line.starts_with("Comment=") && comment.is_none() {
+            comment = Some(line["Comment=".len()..].to_string());
+        } else if line == "NoDisplay=true" {
+            no_display = true;
         }
     }
 
-    if nodisplay {
+    if no_display {
         return None;
     }
 
-    match (name, exec) {
-        (Some(n), Some(e)) => Some(AppEntry {
-            name: n,
-            exec: e,
+    if let (Some(name), Some(exec)) = (name, exec) {
+        let clean_exec = exec.split_whitespace().next().unwrap_or(&exec).to_string();
+        Some(AppEntry {
+            name,
+            exec: clean_exec,
             path: path.to_path_buf(),
             comment,
-        }),
-        _ => None,
+        })
+    } else {
+        None
     }
 }

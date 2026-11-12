@@ -13,28 +13,29 @@ pub fn now_millis() -> u64 {
 
 pub fn setup_window_effects(window: &WebviewWindow) {
     #[cfg(target_os = "windows")]
-    {
-        use window_vibrancy::{apply_acrylic, apply_mica};
-        // Attempt acrylic blur (Windows 10/11) or mica effect
-        if apply_acrylic(window, Some((0, 0, 0, 10))).is_err() {
-            let _ = apply_mica(window, Some(true));
-        }
+    unsafe {
+        use windows_sys::Win32::Graphics::Dwm::{
+            DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
+        };
+        if let Ok(hwnd) = window.hwnd() {
+            // Apply DWM hardware rounded corners on Windows 11
+            let preference = DWMWCP_ROUND;
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_WINDOW_CORNER_PREFERENCE as u32,
+                &preference as *const _ as *const _,
+                std::mem::size_of::<u32>() as u32,
+            );
 
-        // Apply DWM hardware rounded corners on Windows 11
-        #[cfg(target_os = "windows")]
-        unsafe {
-            use windows_sys::Win32::Graphics::Dwm::{
-                DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-            };
-            if let Ok(hwnd) = window.hwnd() {
-                let preference = DWMWCP_ROUND;
-                let _ = DwmSetWindowAttribute(
-                    hwnd.0 as _,
-                    DWMWA_WINDOW_CORNER_PREFERENCE as u32,
-                    &preference as *const _ as *const _,
-                    std::mem::size_of::<u32>() as u32,
-                );
-            }
+            // Apply native Windows 11 DWM backdrop: Acrylic (3) or Mica (2)
+            const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
+            let backdrop_type: u32 = 3; // DWMSBT_TRANSIENTWINDOW
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_SYSTEMBACKDROP_TYPE,
+                &backdrop_type as *const _ as *const _,
+                std::mem::size_of::<u32>() as u32,
+            );
         }
     }
 }

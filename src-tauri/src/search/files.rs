@@ -77,6 +77,8 @@ pub async fn search_filesystem(
                             path: Some(path_str.to_string()),
                             action_hint: Some("↵ Open • Tab Copy".into()),
                             score: if file_name_lower.starts_with(&q) { 500 } else { 300 },
+                            snippet: None,
+                            admin_path: None,
                         });
                     }
                 }

@@ -35,8 +35,11 @@ fuzzy-matcher = "0.3.7"
 window-vibrancy = "0.8"
 open = "5.3"
 chrono = { version = "0.4", features = ["serde"] }
+regex = "1.11"
+rand = "0.8"
 
 [target.'cfg(windows)'.dependencies]
+winreg = "0.52"
 windows-sys = { version = "0.59", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Dwm",

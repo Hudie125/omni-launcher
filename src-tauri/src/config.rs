@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8,35 +9,53 @@ pub struct AppConfig {
     #[serde(alias = "bottomOffset")]
     pub bottom_offset: i32,
     pub theme: String,
+    #[serde(alias = "accentColor")]
+    pub accent_color: String,
+    pub scale: f64,
     #[serde(alias = "hideOnBlur")]
     pub hide_on_blur: bool,
     #[serde(alias = "ollamaModel")]
     pub ollama_model: String,
+    pub autostart: bool,
     #[serde(alias = "fileSearchDirs")]
     pub file_search_dirs: Vec<String>,
     #[serde(alias = "fileExcludePatterns")]
     pub file_exclude_patterns: Vec<String>,
+    pub snippets: HashMap<String, String>,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         let mut default_dirs = Vec::new();
+        if let Some(user_dirs) = dirs::desktop_dir() {
+            default_dirs.push(user_dirs.to_string_lossy().to_string());
+        }
         if let Some(user_dirs) = dirs::document_dir() {
             default_dirs.push(user_dirs.to_string_lossy().to_string());
         }
         if let Some(dl_dir) = dirs::download_dir() {
             default_dirs.push(dl_dir.to_string_lossy().to_string());
         }
-        if let Some(dt_dir) = dirs::desktop_dir() {
-            default_dirs.push(dt_dir.to_string_lossy().to_string());
+        if let Some(pic_dir) = dirs::picture_dir() {
+            default_dirs.push(pic_dir.to_string_lossy().to_string());
         }
+        if let Some(vid_dir) = dirs::video_dir() {
+            default_dirs.push(vid_dir.to_string_lossy().to_string());
+        }
+
+        let mut snippets = HashMap::new();
+        snippets.insert(";email".into(), "user@example.com".into());
+        snippets.insert(";shrug".into(), "¯\\_(ツ)_/¯".into());
 
         Self {
             hotkey: "RightAlt".to_string(),
             bottom_offset: 80,
             theme: "oled".to_string(),
+            accent_color: "blue".to_string(),
+            scale: 1.0,
             hide_on_blur: false,
             ollama_model: "auto".to_string(),
+            autostart: false,
             file_search_dirs: default_dirs,
             file_exclude_patterns: vec![
                 "node_modules".into(),
@@ -49,6 +68,7 @@ impl Default for AppConfig {
                 "$Recycle.Bin".into(),
                 "AppData\\Local\\Temp".into(),
             ],
+            snippets,
         }
     }
 }
