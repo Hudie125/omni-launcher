@@ -108,12 +108,18 @@ async fn save_config(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<AppConfig, String> {
+    debug_log(&format!("save_config called: theme={}, accent={}, hotkey={}, offset={}", new_config.theme, new_config.accent_color, new_config.hotkey, new_config.bottom_offset));
     {
         let mut cfg = state.config.write().await;
         *cfg = new_config.clone();
     }
 
-    new_config.save().map_err(|e| e.to_string())?;
+    new_config.save().map_err(|e| {
+        debug_log(&format!("save_config error: {:?}", e));
+        e.to_string()
+    })?;
+
+    debug_log("save_config successfully persisted to toml");
 
     // Reposition window with new bottom offset
     if let Some(win) = app.get_webview_window("main") {
@@ -121,6 +127,26 @@ async fn save_config(
     }
 
     Ok(new_config)
+}
+
+#[tauri::command]
+fn start_voice_typing() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+            keybd_event, KEYEVENTF_KEYUP, VK_LWIN,
+        };
+        const VK_H: u8 = 0x48;
+        keybd_event(VK_LWIN as u8, 0, 0, 0);
+        keybd_event(VK_H, 0, 0, 0);
+        keybd_event(VK_H, 0, KEYEVENTF_KEYUP, 0);
+        keybd_event(VK_LWIN as u8, 0, KEYEVENTF_KEYUP, 0);
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Voice typing is supported on Windows via Win+H".into())
+    }
 }
 
 // --- Notes IPC Commands ---
@@ -305,6 +331,13 @@ pub fn run() {
                 tauri::WindowEvent::Focused(focused) => {
                     if let Some(state) = window.try_state::<AppState>() {
                         state.monitor.set_active(*focused);
+                        if !*focused {
+                            if let Ok(cfg) = state.config.try_read() {
+                                if cfg.hide_on_blur {
+                                    let _ = window.hide();
+                                }
+                            }
+                        }
                     }
                 }
                 _ => {}
@@ -331,7 +364,8 @@ pub fn run() {
             set_autostart,
             get_clipboard_items,
             push_clipboard_item,
-            reveal_file
+            reveal_file,
+            start_voice_typing
         ]);
 
     debug_log("building tauri application with context");

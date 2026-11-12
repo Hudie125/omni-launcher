@@ -640,28 +640,12 @@
   }
 
   // =========================================================================
-  // Keyboard Navigation & Shortcuts (Including Instant Alt Close Fix)
+  // Keyboard Navigation & Shortcuts
   // =========================================================================
 
   window.addEventListener('keydown', (e) => {
     // If user is actively recording hotkey in Settings, don't intercept!
     if (isRecordingHotkey) return;
-
-    // Fix for Alt closing when Finder window has focus:
-    // RightAlt generates e.code === 'AltRight', e.key === 'AltGraph', or e.location === 2
-    const isRightAlt = e.code === 'AltRight' || e.key === 'AltGraph' || (e.key === 'Alt' && e.location === 2);
-    const isAltSpace = (e.altKey && (e.code === 'Space' || e.key === ' '));
-    const isCustomMatch = currentConfig.hotkey && (
-      (currentConfig.hotkey.toLowerCase() === 'rightalt' && isRightAlt) ||
-      (currentConfig.hotkey.toLowerCase() === 'alt+space' && isAltSpace)
-    );
-
-    if (isRightAlt || isCustomMatch) {
-      e.preventDefault();
-      e.stopPropagation();
-      invoke('hide_launcher');
-      return;
-    }
 
     // 1. Check if any modal is currently visible
     const isModalOpen = (notesModal && !notesModal.classList.contains('hidden')) ||
@@ -726,15 +710,6 @@
       }
     }
   });
-
-  window.addEventListener('keyup', (e) => {
-    if (isRecordingHotkey) return;
-    const isRightAlt = e.code === 'AltRight' || e.key === 'AltGraph' || (e.key === 'Alt' && e.location === 2);
-    if (isRightAlt) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, true);
 
   // Search input typing listener
   searchInput.addEventListener('input', (e) => {
@@ -1231,7 +1206,11 @@
         snippets: currentConfig.snippets || {},
       };
 
-      await invoke('save_config', { new_config: cleanConfig });
+      try {
+        localStorage.setItem('finder_config', JSON.stringify(cleanConfig));
+      } catch (_) {}
+
+      await invoke('save_config', { newConfig: cleanConfig, new_config: cleanConfig });
       await invoke('set_autostart', { enabled: settingAutostart.checked });
 
       currentConfig = cleanConfig;
@@ -1344,57 +1323,21 @@
   });
 
   // =========================================================================
-  // Voice Input (Speech Recognition)
+  // Voice Input (Windows Native Voice Typing Dictation)
   // =========================================================================
 
-  btnVoice.addEventListener('click', () => {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) {
-      showToast('Speech recognition not supported in this Webview');
-      return;
-    }
-
-    if (speechRecognizer) {
-      speechRecognizer.stop();
-      speechRecognizer = null;
-      btnVoice.classList.remove('listening');
-      return;
-    }
-
+  btnVoice.addEventListener('click', async () => {
+    searchInput.focus();
     try {
-      speechRecognizer = new SpeechRec();
-      speechRecognizer.continuous = false;
-      speechRecognizer.interimResults = false;
-      speechRecognizer.lang = navigator.language || 'en-US';
-
+      await invoke('start_voice_typing');
       btnVoice.classList.add('listening');
-      showToast('Listening for voice input...');
-
-      speechRecognizer.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        searchInput.value = transcript;
-        performSearch(transcript);
-        showToast(`Heard: "${transcript}"`);
-      };
-
-      speechRecognizer.onerror = (e) => {
-        console.warn('SpeechRecognition error:', e);
-        showToast('Speech recognition error / mic denied');
+      showToast('🎙️ Voice Typing (Win+H) activated — speak now!', 4500);
+      setTimeout(() => {
         btnVoice.classList.remove('listening');
-        speechRecognizer = null;
-      };
-
-      speechRecognizer.onend = () => {
-        btnVoice.classList.remove('listening');
-        speechRecognizer = null;
-      };
-
-      speechRecognizer.start();
-    } catch (e) {
-      console.error('Speech start error:', e);
-      btnVoice.classList.remove('listening');
-      speechRecognizer = null;
-      showToast('Microphone access denied or error');
+      }, 5000);
+    } catch (err) {
+      console.warn('Voice typing error:', err);
+      showToast('Press Win+H to start Voice Typing');
     }
   });
 

@@ -77,20 +77,23 @@ fn start_windows_right_alt_hook(app: AppHandle, bottom_offset: i32, is_running: 
     unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         if code >= 0 {
             let msg = wparam as u32;
-            if msg == WM_KEYUP || msg == WM_SYSKEYUP {
-                let kbd = *(lparam as *const KBDLLHOOKSTRUCT);
-                // VK_RMENU is 0xA5 (Right Alt), or VK_MENU (0x12) with extended bit 0x1
-                let is_right_alt = kbd.vkCode == 0xA5 || (kbd.vkCode == 0x12 && (kbd.flags & 1) != 0);
-                if is_right_alt {
+            let kbd = *(lparam as *const KBDLLHOOKSTRUCT);
+            // VK_RMENU is 0xA5 (Right Alt), or VK_MENU (0x12) with extended bit 0x1
+            let is_right_alt = kbd.vkCode == 0xA5 || (kbd.vkCode == 0x12 && (kbd.flags & 1) != 0);
+            if is_right_alt {
+                if msg == WM_KEYUP || msg == WM_SYSKEYUP {
                     let now = crate::window::now_millis();
                     let last = LAST_KEY_UP.load(Ordering::Relaxed);
-                    if now.saturating_sub(last) >= 280 {
+                    if now.saturating_sub(last) >= 200 {
                         LAST_KEY_UP.store(now, Ordering::Relaxed);
                         if let Some(ctx) = CTX.get() {
                             let _ = crate::window::toggle_launcher(&ctx.app, ctx.bottom_offset);
                         }
                     }
                 }
+                // Return 1 to suppress both keydown and keyup from reaching Windows or WebView2.
+                // This prevents Windows from activating menu mode (SC_KEYMENU) and avoids focus issues.
+                return 1;
             }
         }
         CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)

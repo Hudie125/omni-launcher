@@ -148,8 +148,9 @@ fn search_file_for_snippet(path: &Path, q_lower: &str) -> Option<String> {
         if let Ok(line_text) = line {
             if line_text.to_lowercase().contains(q_lower) {
                 let trimmed = line_text.trim();
-                let snippet = if trimmed.len() > 100 {
-                    format!("{}...", &trimmed[..97])
+                let snippet = if trimmed.chars().count() > 100 {
+                    let s: String = trimmed.chars().take(97).collect();
+                    format!("{}...", s)
                 } else {
                     trimmed.to_string()
                 };
