@@ -6,7 +6,7 @@
   <title>Finder</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-oled accent-blue">
+<body class="theme-oled">
   <div id="launcher-container" class="launcher-card">
     
     <!-- Top Header Bar (Draggable) -->
@@ -24,13 +24,13 @@
       </div>
 
       <div class="header-right">
-        <!-- Live Mini Weather -->
-        <div id="header-weather" class="header-weather-pill" title="Current Weather">
+        <!-- Live Mini Weather (Clickable to open weather search dialog) -->
+        <button id="header-weather" class="header-weather-pill" title="Click to check weather in any city">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="weather-icon">
             <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
           </svg>
-          <span id="weather-text">Weather --</span>
-        </div>
+          <span id="weather-text">Weather</span>
+        </button>
 
         <!-- Voice Search Button -->
         <button id="btn-voice" class="header-btn" title="Voice Input (Speech Recognition)">
@@ -82,7 +82,7 @@
         <input 
           id="search-input" 
           type="text" 
-          placeholder="Search apps, rnd2(10/3), >commands, 100 usd to eur, >bind Ctrl+N notepad, !note text..." 
+          placeholder="Search apps, rnd2(10/3), >commands, 100 usd to eur, >weather city, !note..." 
           autocomplete="off" 
           spellcheck="false" 
           autofocus 
@@ -102,7 +102,7 @@
           <button class="cat-pill" data-filter="app">Programs</button>
           <button class="cat-pill" data-filter="file">Files</button>
           <button class="cat-pill" data-filter="content">Content</button>
-          <button class="cat-pill" data-filter="web">Web & AI</button>
+          <button class="cat-pill" data-filter="web">Web &amp; AI</button>
           <button class="cat-pill" data-filter="clip">Clipboard</button>
         </div>
 
@@ -212,12 +212,64 @@
         <span class="tip"><kbd>Shift+↵</kbd> Admin</span>
         <span class="tip"><kbd>Ctrl+1..9</kbd> Quick Select</span>
         <span class="tip"><kbd>Tab</kbd> Copy Path</span>
+        <span class="tip"><kbd>RightAlt</kbd> Toggle</span>
         <span class="tip"><kbd>Esc</kbd> Hide</span>
       </div>
       <div class="footer-right-info">
-        <span class="version-label">Finder v0.1 • Rust + Tauri v2</span>
+        <span class="version-label">Finder • Rust + Tauri v2</span>
       </div>
     </footer>
+
+    <!-- MODAL: Weather Forecast -->
+    <div id="weather-modal" class="modal-overlay hidden">
+      <div class="modal-box weather-box">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-title-icon">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+            </svg>
+            <h2>Live Weather Forecast</h2>
+          </div>
+          <button id="btn-close-weather" class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="weather-search-row">
+          <input type="text" id="weather-city-input" placeholder="Enter city (e.g. Paris, Tokyo, Dubai, Москва, Казань, Almaty)..." />
+          <button id="btn-fetch-weather" class="btn-primary-sm">Check</button>
+        </div>
+
+        <div class="weather-quick-cities">
+          <span class="quick-city-label">Popular:</span>
+          <button class="btn-quick-city" data-city="Moscow">Moscow</button>
+          <button class="btn-quick-city" data-city="Saint Petersburg">SPB</button>
+          <button class="btn-quick-city" data-city="London">London</button>
+          <button class="btn-quick-city" data-city="New York">New York</button>
+          <button class="btn-quick-city" data-city="Tokyo">Tokyo</button>
+          <button class="btn-quick-city" data-city="Paris">Paris</button>
+          <button class="btn-quick-city" data-city="Dubai">Dubai</button>
+        </div>
+
+        <div id="weather-result-card" class="weather-result-card">
+          <div id="weather-card-city" class="weather-city-title">Enter any city above or pick a popular shortcut</div>
+          <div id="weather-card-temp" class="weather-temp-large">--°C</div>
+          <div id="weather-card-desc" class="weather-desc">Open-Meteo live satellite &amp; radar forecast</div>
+          <div class="weather-details-grid">
+            <div class="wx-detail-item">
+              <span class="wx-detail-label">Wind</span>
+              <span id="wx-wind" class="wx-detail-val">-- km/h</span>
+            </div>
+            <div class="wx-detail-item">
+              <span class="wx-detail-label">Humidity</span>
+              <span id="wx-humidity" class="wx-detail-val">--%</span>
+            </div>
+            <div class="wx-detail-item">
+              <span class="wx-detail-label">Condition</span>
+              <span id="wx-code" class="wx-detail-val">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- MODAL: Notes Manager -->
     <div id="notes-modal" class="modal-overlay hidden">
@@ -284,12 +336,12 @@
         <div class="settings-form">
           <!-- Global Hotkey -->
           <div class="form-group">
-            <label class="form-label" for="setting-hotkey">Global Hotkey:</label>
+            <label class="form-label" for="setting-hotkey">Global Activation Hotkey:</label>
             <div class="hotkey-input-row">
               <input type="text" id="setting-hotkey" value="RightAlt" readonly />
               <button id="btn-record-hotkey" class="btn-ghost">Record Key</button>
             </div>
-            <span class="form-help">Default: RightAlt. Supported: Alt+Space, Ctrl+Shift+Space, etc.</span>
+            <span class="form-help">Default: RightAlt. Press anywhere to toggle. Supported: Alt+Space, Ctrl+Shift+Space, etc.</span>
           </div>
 
           <!-- Theme -->
@@ -297,22 +349,36 @@
             <label class="form-label" for="setting-theme">Visual Theme:</label>
             <select id="setting-theme" class="form-select">
               <option value="oled">Pitch Black (OLED #000000)</option>
-              <option value="glass">Frosted Glassmorphism</option>
+              <option value="monochrome">Monochrome (Black, White &amp; Grey)</option>
+              <option value="glass">Frosted Glassmorphism (Dark High Contrast)</option>
               <option value="dark">Dark Slate Graphite</option>
               <option value="light">Light Platinum</option>
             </select>
           </div>
 
-          <!-- Accent Color -->
+          <!-- Accent Color Palette & Custom Color Picker -->
           <div class="form-group">
-            <label class="form-label">Accent Color:</label>
-            <div class="color-picker-row">
-              <button class="color-dot blue active" data-color="blue" title="Indigo Blue"></button>
-              <button class="color-dot green" data-color="green" title="Emerald Green"></button>
-              <button class="color-dot cyan" data-color="cyan" title="Cyber Cyan"></button>
-              <button class="color-dot purple" data-color="purple" title="Violet Purple"></button>
-              <button class="color-dot amber" data-color="amber" title="Amber Orange"></button>
-              <button class="color-dot rose" data-color="rose" title="Crimson Rose"></button>
+            <label class="form-label">Accent Color Palette &amp; Picker:</label>
+            <div class="color-palette-grid">
+              <button type="button" class="color-dot" data-hex="#6366f1" style="background:#6366f1" title="Indigo"></button>
+              <button type="button" class="color-dot" data-hex="#3b82f6" style="background:#3b82f6" title="Blue"></button>
+              <button type="button" class="color-dot" data-hex="#06b6d4" style="background:#06b6d4" title="Cyan"></button>
+              <button type="button" class="color-dot" data-hex="#14b8a6" style="background:#14b8a6" title="Teal"></button>
+              <button type="button" class="color-dot" data-hex="#10b981" style="background:#10b981" title="Emerald"></button>
+              <button type="button" class="color-dot" data-hex="#84cc16" style="background:#84cc16" title="Lime"></button>
+              <button type="button" class="color-dot" data-hex="#f59e0b" style="background:#f59e0b" title="Amber"></button>
+              <button type="button" class="color-dot" data-hex="#f97316" style="background:#f97316" title="Orange"></button>
+              <button type="button" class="color-dot" data-hex="#ef4444" style="background:#ef4444" title="Red"></button>
+              <button type="button" class="color-dot" data-hex="#f43f5e" style="background:#f43f5e" title="Rose"></button>
+              <button type="button" class="color-dot" data-hex="#d946ef" style="background:#d946ef" title="Fuchsia"></button>
+              <button type="button" class="color-dot" data-hex="#a855f7" style="background:#a855f7" title="Purple"></button>
+              <button type="button" class="color-dot" data-hex="#ffffff" style="background:#ffffff; box-shadow:inset 0 0 0 1px #888;" title="White"></button>
+              <button type="button" class="color-dot" data-hex="#94a3b8" style="background:#94a3b8" title="Silver"></button>
+            </div>
+            <div class="custom-color-row">
+              <input type="color" id="custom-accent-picker" class="custom-color-input" value="#6366f1" title="Click to open full color spectrum" />
+              <input type="text" id="custom-accent-hex" class="custom-hex-input" value="#6366f1" placeholder="#6366f1" maxlength="7" />
+              <span class="custom-color-label">Custom Hex Color</span>
             </div>
           </div>
 

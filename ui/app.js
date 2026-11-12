@@ -25,7 +25,7 @@
   let customBindsMap = {};
   let isRecordingHotkey = false;
   let speechRecognizer = null;
-  let weatherCity = 'Auto';
+  let currentAccentColor = '#6366f1';
 
   // DOM Elements
   const searchInput = document.getElementById('search-input');
@@ -94,6 +94,8 @@
   const settingHideBlur = document.getElementById('setting-hide-blur');
   const settingOllamaModel = document.getElementById('setting-ollama-model');
   const colorDots = document.querySelectorAll('.color-dot');
+  const customAccentPicker = document.getElementById('custom-accent-picker');
+  const customAccentHex = document.getElementById('custom-accent-hex');
   const btnSaveSettings = document.getElementById('btn-save-settings');
   const btnExitApp = document.getElementById('btn-exit-app');
 
@@ -104,6 +106,19 @@
   const bindInputAction = document.getElementById('bind-input-action');
   const btnAddBind = document.getElementById('btn-add-bind');
   const bindsItemsList = document.getElementById('binds-items-list');
+
+  // Weather Modal Elements
+  const weatherModal = document.getElementById('weather-modal');
+  const btnCloseWeather = document.getElementById('btn-close-weather');
+  const weatherCityInput = document.getElementById('weather-city-input');
+  const btnFetchWeather = document.getElementById('btn-fetch-weather');
+  const btnQuickCities = document.querySelectorAll('.btn-quick-city');
+  const weatherCardCity = document.getElementById('weather-card-city');
+  const weatherCardTemp = document.getElementById('weather-card-temp');
+  const weatherCardDesc = document.getElementById('weather-card-desc');
+  const wxWind = document.getElementById('wx-wind');
+  const wxHumidity = document.getElementById('wx-humidity');
+  const wxCode = document.getElementById('wx-code');
 
   // SVG Icons Map
   const ICONS = {
@@ -120,76 +135,73 @@
     time: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`
   };
 
-  // Complete List of Quick Commands matching Python
+  // Complete List of Quick Commands with direct actions & URLs
   const ALL_COMMANDS = [
     // System
-    { name: "Lock PC", key: "lock", cat: "System", sub: "Lock screen" },
-    { name: "Sleep", key: "sleep", cat: "System", sub: "Suspend state" },
-    { name: "Reboot (10s)", key: "reboot", cat: "System", sub: "Restart with timer" },
-    { name: "Shutdown (10s)", key: "shutdown", cat: "System", sub: "Power off with timer" },
-    { name: "Cancel Shutdown", key: "cancel", cat: "System", sub: "Abort shutdown" },
-    { name: "Task Manager", key: "taskmgr", cat: "System", sub: "taskmgr.exe" },
-    { name: "Control Panel", key: "panel", cat: "System", sub: "control.exe" },
-    { name: "Windows Settings", key: "settings", cat: "System", sub: "ms-settings:" },
-    { name: "Snipping Tool", key: "snip", cat: "System", sub: "ms-screenclip:" },
-    { name: "PowerShell", key: "ps", cat: "System", sub: "powershell.exe" },
-    { name: "Terminal", key: "wt", cat: "System", sub: "Windows Terminal" },
-    { name: "Registry Editor", key: "regedit", cat: "System", sub: "regedit.exe" },
-    { name: "Services", key: "services", cat: "System", sub: "services.msc" },
-    { name: "Disk Management", key: "disk", cat: "System", sub: "diskmgmt.msc" },
-    { name: "Device Manager", key: "devmgmt", cat: "System", sub: "devmgmt.msc" },
-    { name: "Event Viewer", key: "eventvwr", cat: "System", sub: "eventvwr.msc" },
-    { name: "System Info", key: "msinfo", cat: "System", sub: "msinfo32.exe" },
-    { name: "Paint", key: "paint", cat: "System", sub: "mspaint.exe" },
+    { name: "Lock PC", key: "lock", cat: "System", sub: "Lock screen", type: "cmd", path: "cmd://lock" },
+    { name: "Sleep", key: "sleep", cat: "System", sub: "Suspend state", type: "cmd", path: "cmd://sleep" },
+    { name: "Reboot (10s)", key: "reboot", cat: "System", sub: "Restart with timer", type: "cmd", path: "cmd://reboot" },
+    { name: "Shutdown (10s)", key: "shutdown", cat: "System", sub: "Power off with timer", type: "cmd", path: "cmd://shutdown" },
+    { name: "Cancel Shutdown", key: "cancel", cat: "System", sub: "Abort shutdown", type: "cmd", path: "cmd://cancel_shutdown" },
+    { name: "Task Manager", key: "taskmgr", cat: "System", sub: "taskmgr.exe", type: "cmd", path: "taskmgr.exe" },
+    { name: "Control Panel", key: "panel", cat: "System", sub: "control.exe", type: "cmd", path: "control.exe" },
+    { name: "Windows Settings", key: "settings", cat: "System", sub: "ms-settings:", type: "cmd", path: "ms-settings:" },
+    { name: "Snipping Tool", key: "snip", cat: "System", sub: "ms-screenclip:", type: "cmd", path: "ms-screenclip:" },
+    { name: "PowerShell", key: "ps", cat: "System", sub: "powershell.exe", type: "cmd", path: "powershell.exe" },
+    { name: "Terminal", key: "wt", cat: "System", sub: "Windows Terminal", type: "cmd", path: "wt.exe" },
+    { name: "Registry Editor", key: "regedit", cat: "System", sub: "regedit.exe", type: "cmd", path: "regedit.exe" },
+    { name: "Services", key: "services", cat: "System", sub: "services.msc", type: "cmd", path: "services.msc" },
+    { name: "Disk Management", key: "disk", cat: "System", sub: "diskmgmt.msc", type: "cmd", path: "diskmgmt.msc" },
+    { name: "Device Manager", key: "devmgmt", cat: "System", sub: "devmgmt.msc", type: "cmd", path: "devmgmt.msc" },
+    { name: "Event Viewer", key: "eventvwr", cat: "System", sub: "eventvwr.msc", type: "cmd", path: "eventvwr.msc" },
+    { name: "System Info", key: "msinfo", cat: "System", sub: "msinfo32.exe", type: "cmd", path: "msinfo32.exe" },
+    { name: "Paint", key: "paint", cat: "System", sub: "mspaint.exe", type: "cmd", path: "mspaint.exe" },
 
     // Folders
-    { name: "Home Profile", key: "home", cat: "Folders", sub: "User directory" },
-    { name: "Downloads", key: "downloads", cat: "Folders", sub: "~/Downloads" },
-    { name: "Documents", key: "docs", cat: "Folders", sub: "~/Documents" },
-    { name: "Pictures", key: "pics", cat: "Folders", sub: "~/Pictures" },
-    { name: "Videos", key: "videos", cat: "Folders", sub: "~/Videos" },
-    { name: "Desktop", key: "desktop", cat: "Folders", sub: "~/Desktop" },
+    { name: "Home Profile", key: "home", cat: "Folders", sub: "User directory", type: "cmd", path: "cmd://home" },
+    { name: "Downloads", key: "downloads", cat: "Folders", sub: "~/Downloads", type: "cmd", path: "cmd://downloads" },
+    { name: "Documents", key: "docs", cat: "Folders", sub: "~/Documents", type: "cmd", path: "cmd://docs" },
+    { name: "Pictures", key: "pics", cat: "Folders", sub: "~/Pictures", type: "cmd", path: "cmd://pics" },
+    { name: "Videos", key: "videos", cat: "Folders", sub: "~/Videos", type: "cmd", path: "cmd://videos" },
+    { name: "Desktop", key: "desktop", cat: "Folders", sub: "~/Desktop", type: "cmd", path: "cmd://desktop" },
 
     // Web
-    { name: "My Public IP", key: "ip", cat: "Web", sub: "2ip.ru / ipify" },
-    { name: "Google Search", key: "g", cat: "Web", sub: "google.com" },
-    { name: "YouTube", key: "yt", cat: "Web", sub: "youtube.com" },
-    { name: "Wikipedia", key: "wiki", cat: "Web", sub: "wikipedia.org" },
-    { name: "Gmail", key: "gmail", cat: "Web", sub: "mail.google.com" },
-    { name: "Telegram Web", key: "tg", cat: "Web", sub: "web.telegram.org" },
-    { name: "GitHub", key: "gh", cat: "Web", sub: "github.com" },
-    { name: "Steam", key: "steam", cat: "Web", sub: "steam://open/main" },
-    { name: "Spotify", key: "spotify", cat: "Web", sub: "spotify:" },
+    { name: "My Public IP", key: "ip", cat: "Web", sub: "2ip.ru / ipify", type: "web", path: "https://2ip.ru" },
+    { name: "Google Search", key: "g", cat: "Web", sub: "google.com", type: "web", path: "https://www.google.com" },
+    { name: "YouTube", key: "yt", cat: "Web", sub: "youtube.com", type: "web", path: "https://www.youtube.com" },
+    { name: "Wikipedia", key: "wiki", cat: "Web", sub: "wikipedia.org", type: "web", path: "https://www.wikipedia.org" },
+    { name: "Gmail", key: "gmail", cat: "Web", sub: "mail.google.com", type: "web", path: "https://mail.google.com" },
+    { name: "Telegram Web", key: "tg", cat: "Web", sub: "web.telegram.org", type: "web", path: "https://web.telegram.org" },
+    { name: "GitHub", key: "gh", cat: "Web", sub: "github.com", type: "web", path: "https://github.com" },
+    { name: "Steam", key: "steam", cat: "Web", sub: "steam://open/main", type: "web", path: "steam://open/main" },
+    { name: "Spotify", key: "spotify", cat: "Web", sub: "spotify:", type: "web", path: "spotify:" },
 
     // AI
-    { name: "ChatGPT", key: "chatgpt", cat: "AI", sub: "chatgpt.com" },
-    { name: "Gemini", key: "gemini", cat: "AI", sub: "gemini.google.com" },
-    { name: "Claude AI", key: "claude", cat: "AI", sub: "claude.ai" },
-    { name: "DALL-E 3", key: "dalle", cat: "AI", sub: "chatgpt.com/?model=gpt-4o" },
+    { name: "ChatGPT", key: "chatgpt", cat: "AI", sub: "chatgpt.com", type: "web", path: "https://chatgpt.com" },
+    { name: "Gemini", key: "gemini", cat: "AI", sub: "gemini.google.com", type: "web", path: "https://gemini.google.com" },
+    { name: "Claude AI", key: "claude", cat: "AI", sub: "claude.ai", type: "web", path: "https://claude.ai" },
+    { name: "DALL-E 3", key: "dalle", cat: "AI", sub: "chatgpt.com/?model=gpt-4o", type: "web", path: "https://chatgpt.com/?model=gpt-4o" },
 
     // Utils
-    { name: "Clipboard History", key: "clip", cat: "Utils", sub: ">clip" },
-    { name: "Password 16", key: "pw", cat: "Utils", sub: "16 char random" },
-    { name: "Password 24", key: "pw24", cat: "Utils", sub: "24 char random" },
-    { name: "Password 32", key: "pw32", cat: "Utils", sub: "32 char random" },
-    { name: "Random 1-100", key: "rand", cat: "Utils", sub: "random number" },
-    { name: "Dice Roll (1-6)", key: "dice", cat: "Utils", sub: "d6 roll" },
-    { name: "Coin Flip", key: "coin", cat: "Utils", sub: "Heads or Tails" },
-    { name: "My Key Binds", key: "binds", cat: "Utils", sub: ">binds" },
-    { name: "Key Binds Help", key: "bindhelp", cat: "Utils", sub: ">bindhelp" },
-    { name: "Usage Statistics", key: "stats", cat: "Utils", sub: "Top used items" },
+    { name: "Clipboard History", key: "clip", cat: "Utils", sub: ">clip", type: "input", query: ">clip" },
+    { name: "Password 16", key: "pw", cat: "Utils", sub: "16 char random", type: "action", action: "generate_password_16" },
+    { name: "Password 24", key: "pw24", cat: "Utils", sub: "24 char random", type: "action", action: "generate_password_24" },
+    { name: "Password 32", key: "pw32", cat: "Utils", sub: "32 char random", type: "action", action: "generate_password_32" },
+    { name: "Random 1-100", key: "rand", cat: "Utils", sub: "random number", type: "action", action: "random_1_100" },
+    { name: "Dice Roll (1-6)", key: "dice", cat: "Utils", sub: "d6 roll", type: "action", action: "dice_roll" },
+    { name: "Coin Flip", key: "coin", cat: "Utils", sub: "Heads or Tails", type: "action", action: "coin_flip" },
+    { name: "My Key Binds", key: "binds", cat: "Utils", sub: "Open Key Binds", type: "modal", modal: "binds" },
+    { name: "Quick Notes", key: "notes", cat: "Utils", sub: "Open Notes", type: "modal", modal: "notes" },
+    { name: "Preferences", key: "settings", cat: "Utils", sub: "Open Preferences", type: "modal", modal: "settings" },
+    { name: "Usage Statistics", key: "stats", cat: "Utils", sub: ">stats", type: "input", query: ">stats" },
 
-    // Time
-    { name: "Timer 5m", key: "timer 5m", cat: "Time", sub: "5 minutes" },
-    { name: "Timer 30s", key: "timer 30s", cat: "Time", sub: "30 seconds" },
-    { name: "Timer 15m", key: "timer 15m", cat: "Time", sub: "15 minutes" },
-    { name: "Timer 25m (Pomodoro)", key: "timer 25m", cat: "Time", sub: "Pomodoro" },
-    { name: "Timer 1h", key: "timer 1h", cat: "Time", sub: "1 hour" },
-    { name: "Remind 19:00", key: "remind 19:00", cat: "Time", sub: "Evening reminder" },
-    { name: "Weather Moscow", key: "weather Moscow", cat: "Time", sub: "Open-Meteo" },
-    { name: "Weather SPB", key: "weather Saint Petersburg", cat: "Time", sub: "Open-Meteo" },
-    { name: "Weather London", key: "weather London", cat: "Time", sub: "Open-Meteo" },
-    { name: "Weather New York", key: "weather New York", cat: "Time", sub: "Open-Meteo" }
+    // Time & Weather
+    { name: "Weather Forecast", key: "weather", cat: "Time", sub: "Check any city", type: "modal", modal: "weather" },
+    { name: "Timer 5m", key: "timer 5m", cat: "Time", sub: "5 minutes", type: "input", query: ">timer 5m" },
+    { name: "Timer 15m", key: "timer 15m", cat: "Time", sub: "15 minutes", type: "input", query: ">timer 15m" },
+    { name: "Timer 25m (Pomodoro)", key: "timer 25m", cat: "Time", sub: "Pomodoro", type: "input", query: ">timer 25m" },
+    { name: "Timer 1h", key: "timer 1h", cat: "Time", sub: "1 hour", type: "input", query: ">timer 1h" },
+    { name: "Remind 19:00", key: "remind 19:00", cat: "Time", sub: "Evening reminder", type: "input", query: ">remind 19:00" },
   ];
 
   // Initialize Clock
@@ -240,20 +252,109 @@
     });
   }
 
-  function executeQuickCommand(cmd) {
-    if (cmd.key.startsWith('timer ') || cmd.key.startsWith('remind ') || cmd.key.startsWith('weather ')) {
-      searchInput.value = `>${cmd.key}`;
-      performSearch(searchInput.value);
+  // Direct Execution of Quick Commands
+  async function executeQuickCommand(cmd) {
+    if (!cmd) return;
+
+    if (cmd.type === 'modal') {
+      if (cmd.modal === 'weather') openWeatherModal();
+      else if (cmd.modal === 'notes') openNotesModal();
+      else if (cmd.modal === 'binds') openBindsModal();
+      else if (cmd.modal === 'settings') openSettingsModal();
+      return;
+    }
+
+    if (cmd.type === 'web' || cmd.type === 'ai') {
+      try {
+        await invoke('execute_action', {
+          item: {
+            id: `cmd_${cmd.key}`,
+            title: cmd.name,
+            category: cmd.cat,
+            item_type: 'web',
+            path: cmd.path,
+            score: 1000
+          }
+        });
+        showToast(`Opened ${cmd.name}`);
+      } catch (err) {
+        console.error('Failed to open web action:', err);
+        showToast(`Error: ${err}`);
+      }
+      return;
+    }
+
+    if (cmd.type === 'cmd') {
+      try {
+        await invoke('execute_action', {
+          item: {
+            id: `cmd_${cmd.key}`,
+            title: cmd.name,
+            category: cmd.cat,
+            item_type: 'cmd',
+            path: cmd.path,
+            score: 1000
+          }
+        });
+        showToast(`Executed: ${cmd.name}`);
+      } catch (err) {
+        console.error('Failed to execute command:', err);
+        showToast(`Error: ${err}`);
+      }
+      return;
+    }
+
+    if (cmd.type === 'action') {
+      handleUtilityAction(cmd.action);
+      return;
+    }
+
+    if (cmd.type === 'input') {
+      searchInput.value = cmd.query;
+      performSearch(cmd.query);
       searchInput.focus();
-    } else {
-      searchInput.value = `>${cmd.key}`;
-      performSearch(searchInput.value);
-      // If it immediately produces a single action, execute it or let user review
-      setTimeout(() => {
-        if (currentResults.length > 0) {
-          executeItem(0);
-        }
-      }, 50);
+      return;
+    }
+
+    // Fallback
+    searchInput.value = `>${cmd.key}`;
+    performSearch(searchInput.value);
+    searchInput.focus();
+  }
+
+  // Utility actions (Password, Random, Dice, Coin)
+  async function handleUtilityAction(action) {
+    if (action.startsWith('generate_password_')) {
+      const len = parseInt(action.replace('generate_password_', ''), 10) || 16;
+      const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*()_+-=';
+      let pw = '';
+      const array = new Uint32Array(len);
+      window.crypto.getRandomValues(array);
+      for (let i = 0; i < len; i++) {
+        pw += chars[array[i] % chars.length];
+      }
+      try {
+        await navigator.clipboard.writeText(pw);
+        showToast(`Generated & copied ${len}-char password!`);
+      } catch (_) {}
+    } else if (action === 'random_1_100') {
+      const num = Math.floor(Math.random() * 100) + 1;
+      try {
+        await navigator.clipboard.writeText(String(num));
+        showToast(`🎲 Random 1-100: ${num} (Copied!)`);
+      } catch (_) {}
+    } else if (action === 'dice_roll') {
+      const roll = Math.floor(Math.random() * 6) + 1;
+      try {
+        await navigator.clipboard.writeText(String(roll));
+        showToast(`🎲 Dice roll: ${roll} (Copied!)`);
+      } catch (_) {}
+    } else if (action === 'coin_flip') {
+      const res = Math.random() < 0.5 ? 'Heads' : 'Tails';
+      try {
+        await navigator.clipboard.writeText(res);
+        showToast(`🪙 Coin flip: ${res} (Copied!)`);
+      } catch (_) {}
     }
   }
 
@@ -313,7 +414,7 @@
     updateSearchModeTag(trimmed);
     searchClearBtn.classList.toggle('hidden', query.length === 0);
 
-    // Fast handle !note command directly
+    // Fast handle !notes command directly
     if (trimmed === '!notes') {
       openNotesModal();
       return;
@@ -425,7 +526,6 @@
 
       // Event handlers
       el.addEventListener('click', (e) => {
-        // Avoid executing if clicking action buttons
         if (e.target.closest('.btn-file-action')) return;
         executeItem(index, e.shiftKey);
       });
@@ -539,12 +639,35 @@
     }
   }
 
-  // Keyboard Navigation & Shortcuts
+  // =========================================================================
+  // Keyboard Navigation & Shortcuts (Including Instant Alt Close Fix)
+  // =========================================================================
+
   window.addEventListener('keydown', (e) => {
+    // If user is actively recording hotkey in Settings, don't intercept!
+    if (isRecordingHotkey) return;
+
+    // Fix for Alt closing when Finder window has focus:
+    // RightAlt generates e.code === 'AltRight', e.key === 'AltGraph', or e.location === 2
+    const isRightAlt = e.code === 'AltRight' || e.key === 'AltGraph' || (e.key === 'Alt' && e.location === 2);
+    const isAltSpace = (e.altKey && (e.code === 'Space' || e.key === ' '));
+    const isCustomMatch = currentConfig.hotkey && (
+      (currentConfig.hotkey.toLowerCase() === 'rightalt' && isRightAlt) ||
+      (currentConfig.hotkey.toLowerCase() === 'alt+space' && isAltSpace)
+    );
+
+    if (isRightAlt || isCustomMatch) {
+      e.preventDefault();
+      e.stopPropagation();
+      invoke('hide_launcher');
+      return;
+    }
+
     // 1. Check if any modal is currently visible
-    const isModalOpen = !notesModal.classList.contains('hidden') ||
-                        !settingsModal.classList.contains('hidden') ||
-                        !bindsModal.classList.contains('hidden');
+    const isModalOpen = (notesModal && !notesModal.classList.contains('hidden')) ||
+                        (settingsModal && !settingsModal.classList.contains('hidden')) ||
+                        (bindsModal && !bindsModal.classList.contains('hidden')) ||
+                        (weatherModal && !weatherModal.classList.contains('hidden'));
 
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -604,6 +727,15 @@
     }
   });
 
+  window.addEventListener('keyup', (e) => {
+    if (isRecordingHotkey) return;
+    const isRightAlt = e.code === 'AltRight' || e.key === 'AltGraph' || (e.key === 'Alt' && e.location === 2);
+    if (isRightAlt) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
   // Search input typing listener
   searchInput.addEventListener('input', (e) => {
     clearTimeout(debounceTimer);
@@ -623,10 +755,163 @@
 
   // Close modals helper
   function closeAllModals() {
-    notesModal.classList.add('hidden');
-    settingsModal.classList.add('hidden');
-    bindsModal.classList.add('hidden');
+    if (notesModal) notesModal.classList.add('hidden');
+    if (settingsModal) settingsModal.classList.add('hidden');
+    if (bindsModal) bindsModal.classList.add('hidden');
+    if (weatherModal) weatherModal.classList.add('hidden');
     searchInput.focus();
+  }
+
+  // =========================================================================
+  // Live Weather Forecast Modal
+  // =========================================================================
+
+  const WMO_CODES = {
+    0: "☀️ Clear sky",
+    1: "🌤️ Mainly clear",
+    2: "⛅ Partly cloudy",
+    3: "☁️ Overcast",
+    45: "🌫️ Fog",
+    48: "🌫️ Depositing rime fog",
+    51: "🌦️ Light drizzle",
+    53: "🌦️ Moderate drizzle",
+    55: "🌧️ Dense drizzle",
+    61: "🌧️ Slight rain",
+    63: "🌧️ Moderate rain",
+    65: "🌧️ Heavy rain",
+    71: "🌨️ Slight snow fall",
+    73: "🌨️ Moderate snow fall",
+    75: "❄️ Heavy snow fall",
+    77: "❄️ Snow grains",
+    80: "🌦️ Slight rain showers",
+    81: "🌧️ Moderate rain showers",
+    82: "⛈️ Violent rain showers",
+    85: "🌨️ Slight snow showers",
+    86: "❄️ Heavy snow showers",
+    95: "⛈️ Thunderstorm",
+    96: "⛈️ Thunderstorm with hail",
+    99: "⛈️ Violent thunderstorm"
+  };
+
+  function openWeatherModal() {
+    closeAllModals();
+    if (!weatherModal) return;
+    weatherModal.classList.remove('hidden');
+    if (weatherCityInput) {
+      weatherCityInput.value = '';
+      weatherCityInput.focus();
+    }
+  }
+
+  async function fetchCityWeather(cityName) {
+    const city = (cityName || '').trim();
+    if (!city) return;
+
+    if (weatherCardCity) weatherCardCity.textContent = `Searching "${city}"...`;
+    if (weatherCardTemp) weatherCardTemp.textContent = '--°C';
+    if (weatherCardDesc) weatherCardDesc.textContent = 'Contacting Open-Meteo satellite network...';
+
+    try {
+      // 1. Geocode city name to lat/lon
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+      const geoResp = await fetch(geoUrl);
+      if (!geoResp.ok) throw new Error('Geocoding request failed');
+      const geoData = await geoResp.json();
+
+      if (!geoData.results || geoData.results.length === 0) {
+        if (weatherCardCity) weatherCardCity.textContent = `City "${city}" not found`;
+        if (weatherCardDesc) weatherCardDesc.textContent = 'Please check the spelling or try another city name';
+        return;
+      }
+
+      const match = geoData.results[0];
+      const displayName = `${match.name}${match.country ? ', ' + match.country : ''}`;
+      const lat = match.latitude;
+      const lon = match.longitude;
+
+      // 2. Query forecast
+      const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
+      const wxResp = await fetch(wxUrl);
+      if (!wxResp.ok) throw new Error('Forecast request failed');
+      const wxData = await wxResp.json();
+
+      const curr = wxData.current || {};
+      const temp = curr.temperature_2m !== undefined ? Math.round(curr.temperature_2m) : '--';
+      const wind = curr.wind_speed_10m !== undefined ? `${curr.wind_speed_10m} km/h` : '--';
+      const humidity = curr.relative_humidity_2m !== undefined ? `${curr.relative_humidity_2m}%` : '--';
+      const code = curr.weather_code !== undefined ? curr.weather_code : -1;
+      const desc = WMO_CODES[code] || "⛅ Fair conditions";
+
+      if (weatherCardCity) weatherCardCity.textContent = displayName;
+      if (weatherCardTemp) weatherCardTemp.textContent = `${temp}°C`;
+      if (weatherCardDesc) weatherCardDesc.textContent = desc;
+      if (wxWind) wxWind.textContent = wind;
+      if (wxHumidity) wxHumidity.textContent = humidity;
+      if (wxCode) wxCode.textContent = desc;
+
+      // Update header pill
+      if (weatherText) {
+        weatherText.textContent = `${match.name}: ${temp}°C`;
+      }
+    } catch (err) {
+      console.error('fetchCityWeather error:', err);
+      if (weatherCardCity) weatherCardCity.textContent = 'Weather lookup error';
+      if (weatherCardDesc) weatherCardDesc.textContent = String(err.message || err);
+    }
+  }
+
+  if (headerWeather) {
+    headerWeather.addEventListener('click', openWeatherModal);
+  }
+
+  if (btnCloseWeather) {
+    btnCloseWeather.addEventListener('click', closeAllModals);
+  }
+
+  if (btnFetchWeather) {
+    btnFetchWeather.addEventListener('click', () => {
+      fetchCityWeather(weatherCityInput.value);
+    });
+  }
+
+  if (weatherCityInput) {
+    weatherCityInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        fetchCityWeather(weatherCityInput.value);
+      }
+    });
+  }
+
+  btnQuickCities.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const city = btn.dataset.city;
+      if (weatherCityInput) weatherCityInput.value = city;
+      fetchCityWeather(city);
+    });
+  });
+
+  // Background Auto Weather Detection
+  async function fetchLiveWeather() {
+    try {
+      const geoReq = await fetch('https://ipapi.co/json/');
+      if (!geoReq.ok) return;
+      const geo = await geoReq.json();
+      const city = geo.city || 'Local';
+      const lat = geo.latitude;
+      const lon = geo.longitude;
+      if (!lat || !lon) return;
+
+      const wxReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`);
+      if (!wxReq.ok) return;
+      const wx = await wxReq.json();
+      const temp = wx.current?.temperature_2m;
+      if (temp !== undefined && weatherText) {
+        weatherText.textContent = `${city}: ${Math.round(temp)}°C`;
+      }
+    } catch (_) {
+      if (weatherText) weatherText.textContent = 'Weather';
+    }
   }
 
   // =========================================================================
@@ -768,8 +1053,56 @@
   });
 
   // =========================================================================
-  // Settings Modal Implementation
+  // Settings Modal Implementation (With Color Palette & Fix for Save Error)
   // =========================================================================
+
+  function hexToRgba(hex, alpha = 0.35) {
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function adjustHexBrightness(hex, percent) {
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    let num = parseInt(c, 16);
+    let r = Math.min(255, Math.max(0, ((num >> 16) & 255) + Math.round(255 * (percent / 100))));
+    let g = Math.min(255, Math.max(0, ((num >> 8) & 255) + Math.round(255 * (percent / 100))));
+    let b = Math.min(255, Math.max(0, (num & 255) + Math.round(255 * (percent / 100))));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  function applyAccentHex(hex) {
+    if (!hex || !hex.startsWith('#')) return;
+    currentAccentColor = hex;
+    document.documentElement.style.setProperty('--accent', hex);
+    document.documentElement.style.setProperty('--accent-hover', adjustHexBrightness(hex, 18));
+    document.documentElement.style.setProperty('--accent-glow', hexToRgba(hex, 0.35));
+
+    if (customAccentPicker) customAccentPicker.value = hex;
+    if (customAccentHex) customAccentHex.value = hex;
+
+    colorDots.forEach(dot => {
+      dot.classList.toggle('active', dot.dataset.hex && dot.dataset.hex.toLowerCase() === hex.toLowerCase());
+    });
+
+    try {
+      localStorage.setItem('finder_accent_hex', hex);
+    } catch (_) {}
+  }
+
+  const NAMED_COLOR_MAP = {
+    blue: '#3b82f6',
+    green: '#10b981',
+    cyan: '#06b6d4',
+    purple: '#a855f7',
+    amber: '#f59e0b',
+    rose: '#f43f5e'
+  };
 
   async function openSettingsModal() {
     closeAllModals();
@@ -785,15 +1118,13 @@
       settingScale.value = currentConfig.scale || 1.0;
       scaleValueLabel.textContent = `${Number(settingScale.value).toFixed(2)}x`;
 
-      // Check Windows Autostart status
       const autostartActive = await invoke('is_autostart').catch(() => false);
       settingAutostart.checked = autostartActive;
 
-      // Select active accent color dot
-      const acc = currentConfig.accent_color || 'blue';
-      colorDots.forEach(dot => {
-        dot.classList.toggle('active', dot.dataset.color === acc);
-      });
+      // Restore Accent Color
+      const acc = currentConfig.accent_color || '#6366f1';
+      const hex = acc.startsWith('#') ? acc : (NAMED_COLOR_MAP[acc] || '#6366f1');
+      applyAccentHex(hex);
     } catch (err) {
       console.error('get_config error:', err);
     }
@@ -814,14 +1145,33 @@
     applyTheme(e.target.value);
   });
 
-  // Live Accent Color Dots
+  // Live Palette Dot Clicks
   colorDots.forEach(dot => {
     dot.addEventListener('click', () => {
-      colorDots.forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      applyAccent(dot.dataset.color || 'blue');
+      const hex = dot.dataset.hex;
+      if (hex) {
+        applyAccentHex(hex);
+      }
     });
   });
+
+  // Live Custom Color Picker Input
+  if (customAccentPicker) {
+    customAccentPicker.addEventListener('input', (e) => {
+      applyAccentHex(e.target.value);
+    });
+  }
+
+  // Live Custom Hex Text Input
+  if (customAccentHex) {
+    customAccentHex.addEventListener('input', (e) => {
+      let val = e.target.value.trim();
+      if (!val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        applyAccentHex(val);
+      }
+    });
+  }
 
   // Hotkey Recorder
   btnRecordHotkey.addEventListener('click', () => {
@@ -842,7 +1192,7 @@
 
       let keyName = e.key;
       if (keyName === 'Control' || keyName === 'Alt' || keyName === 'Shift' || keyName === 'Meta') {
-        return; // Wait for full combo or primary key
+        return;
       }
       if (keyName === ' ') keyName = 'Space';
       if (keyName.length === 1) keyName = keyName.toUpperCase();
@@ -860,35 +1210,34 @@
     window.addEventListener('keydown', onKey, true);
   });
 
-  // Save Settings
+  // Save Settings (Strictly clean fields, NO duplicate aliases!)
   btnSaveSettings.addEventListener('click', async () => {
     btnSaveSettings.textContent = 'Saving...';
     btnSaveSettings.disabled = true;
 
     try {
-      const activeColor = document.querySelector('.color-dot.active')?.dataset.color || 'blue';
-      const newConfig = {
-        ...currentConfig,
+      const chosenHex = currentAccentColor || '#6366f1';
+      const cleanConfig = {
         hotkey: settingHotkey.value.trim() || 'RightAlt',
-        theme: settingTheme.value || 'oled',
-        accent_color: activeColor,
-        accentColor: activeColor,
-        scale: parseFloat(settingScale.value) || 1.0,
         bottom_offset: parseInt(settingBottomOffset.value, 10) || 80,
-        bottomOffset: parseInt(settingBottomOffset.value, 10) || 80,
+        theme: settingTheme.value || 'oled',
+        accent_color: chosenHex,
+        scale: parseFloat(settingScale.value) || 1.0,
         hide_on_blur: settingHideBlur.checked,
-        hideOnBlur: settingHideBlur.checked,
         ollama_model: settingOllamaModel.value.trim() || 'auto',
-        ollamaModel: settingOllamaModel.value.trim() || 'auto',
+        autostart: settingAutostart.checked,
+        file_search_dirs: currentConfig.file_search_dirs || [],
+        file_exclude_patterns: currentConfig.file_exclude_patterns || [],
+        snippets: currentConfig.snippets || {},
       };
 
-      await invoke('save_config', { newConfig, new_config: newConfig });
+      await invoke('save_config', { new_config: cleanConfig });
       await invoke('set_autostart', { enabled: settingAutostart.checked });
 
-      currentConfig = newConfig;
-      applyTheme(newConfig.theme);
-      applyAccent(newConfig.accent_color);
-      applyScale(newConfig.scale);
+      currentConfig = cleanConfig;
+      applyTheme(cleanConfig.theme);
+      applyAccentHex(cleanConfig.accent_color);
+      applyScale(cleanConfig.scale);
 
       showToast('Settings saved successfully!');
       setTimeout(() => {
@@ -1050,59 +1399,20 @@
   });
 
   // =========================================================================
-  // Live Weather Fetcher
-  // =========================================================================
-
-  async function fetchLiveWeather() {
-    try {
-      const geoReq = await fetch('https://ipapi.co/json/');
-      if (!geoReq.ok) return;
-      const geo = await geoReq.json();
-      const city = geo.city || 'Local';
-      weatherCity = city;
-      const lat = geo.latitude;
-      const lon = geo.longitude;
-      if (!lat || !lon) return;
-
-      const wxReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`);
-      if (!wxReq.ok) return;
-      const wx = await wxReq.json();
-      const temp = wx.current?.temperature_2m;
-      if (temp !== undefined && weatherText) {
-        weatherText.textContent = `${city}: ${temp}°C`;
-      }
-    } catch (_) {
-      if (weatherText) weatherText.textContent = 'Weather';
-    }
-  }
-
-  if (headerWeather) {
-    headerWeather.addEventListener('click', () => {
-      searchInput.value = `>weather ${weatherCity}`;
-      performSearch(searchInput.value);
-      searchInput.focus();
-    });
-  }
-
-  // =========================================================================
   // Theme, Accent & Scale Application Helpers
   // =========================================================================
 
   function applyTheme(theme) {
     const t = theme || 'oled';
-    document.body.classList.remove('theme-oled', 'theme-glass', 'theme-dark', 'theme-light');
+    document.body.classList.remove('theme-oled', 'theme-monochrome', 'theme-glass', 'theme-dark', 'theme-light');
     document.body.classList.add(`theme-${t}`);
+    
+    if (t === 'monochrome') {
+      applyAccentHex('#ffffff');
+    }
+
     try {
       localStorage.setItem('finder_theme', t);
-    } catch (_) {}
-  }
-
-  function applyAccent(accent) {
-    const a = accent || 'blue';
-    document.body.classList.remove('accent-blue', 'accent-green', 'accent-cyan', 'accent-purple', 'accent-amber', 'accent-rose');
-    document.body.classList.add(`accent-${a}`);
-    try {
-      localStorage.setItem('finder_accent', a);
     } catch (_) {}
   }
 
@@ -1210,8 +1520,8 @@
     try {
       const cachedTheme = localStorage.getItem('finder_theme');
       if (cachedTheme) applyTheme(cachedTheme);
-      const cachedAccent = localStorage.getItem('finder_accent');
-      if (cachedAccent) applyAccent(cachedAccent);
+      const cachedHex = localStorage.getItem('finder_accent_hex');
+      if (cachedHex) applyAccentHex(cachedHex);
     } catch (_) {}
 
     // Load persisted configuration from backend
@@ -1220,7 +1530,10 @@
       if (cfg) {
         currentConfig = cfg;
         if (cfg.theme) applyTheme(cfg.theme);
-        if (cfg.accent_color) applyAccent(cfg.accent_color);
+        if (cfg.accent_color) {
+          const hex = cfg.accent_color.startsWith('#') ? cfg.accent_color : (NAMED_COLOR_MAP[cfg.accent_color] || '#6366f1');
+          applyAccentHex(hex);
+        }
         if (cfg.scale) applyScale(cfg.scale);
       }
     } catch (err) {

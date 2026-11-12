@@ -102,9 +102,60 @@ pub fn execute_system_command(cmd: &str) -> Result<String, String> {
             power::shutdown_system(delay)?;
             Ok(format!("System shutting down in {}s", delay))
         }
-        "cancel" => {
+        "cancel" | "cancel_shutdown" => {
             power::cancel_shutdown()?;
             Ok("Scheduled reboot/shutdown cancelled".into())
+        }
+        "home" => {
+            if let Some(p) = dirs::home_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Home folder".into())
+            } else {
+                Err("Could not find Home directory".into())
+            }
+        }
+        "downloads" => {
+            if let Some(p) = dirs::download_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Downloads folder".into())
+            } else {
+                Err("Could not find Downloads directory".into())
+            }
+        }
+        "docs" | "documents" => {
+            if let Some(p) = dirs::document_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Documents folder".into())
+            } else {
+                Err("Could not find Documents directory".into())
+            }
+        }
+        "pics" | "pictures" => {
+            if let Some(p) = dirs::picture_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Pictures folder".into())
+            } else {
+                Err("Could not find Pictures directory".into())
+            }
+        }
+        "videos" => {
+            if let Some(p) = dirs::video_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Videos folder".into())
+            } else {
+                Err("Could not find Videos directory".into())
+            }
+        }
+        "desktop" => {
+            if let Some(p) = dirs::desktop_dir() {
+                open_path(&p.to_string_lossy())?;
+                Ok("Opened Desktop folder".into())
+            } else {
+                Err("Could not find Desktop directory".into())
+            }
+        }
+        "exit" => {
+            std::process::exit(0);
         }
         "taskmgr" => {
             open_path("taskmgr.exe")?;
